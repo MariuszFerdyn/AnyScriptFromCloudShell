@@ -99,3 +99,17 @@ The script can be stored in an Azure Storage Account as a blob. To provide secur
 - **IP Address Restrictions**: Restrict access to specific IP addresses for added security.
 
 For more information on generating SAS tokens, refer to the [Azure Documentation on Shared Access Signatures](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview).
+
+---
+
+### Worth Knowing: Running Azure Cloud Shell Locally
+
+The `mcr.microsoft.com/azure-cloudshell:latest` image isn't just useful for
+running scripts unattended — it's also a nice way to get a full local Azure
+Cloud Shell experience (Azure CLI, `kubectl`, `jq`, and other tools
+pre-installed) in a disposable container on your own machine, without needing
+a browser or the hosted Azure Cloud Shell:
+
+```bash
+docker run -it --rm --name my-cloudshell-script mcr.microsoft.com/azure-cloudshell:latest /bin/bash
+```
