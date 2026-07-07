@@ -72,12 +72,45 @@ az provider register --namespace Microsoft.OperationalInsights
 # Create Container App Enviorment
 az containerapp env create --name $Enviorment --resource-group $ResourceGroup --location $location
 
-# Create the Container App Job with a system-assigned managed identity.
-# The job's command runs "az login --identity" first to authenticate as the
-# managed identity, then downloads and runs the Bash script.
-# Note: use "--command" (executable) and "--args" (space-separated arguments)
-# instead of a single "--command-line" string, which is not a valid parameter.
-az containerapp job create --name list-subscriptions-job --resource-group $ResourceGroup --environment $Enviorment --trigger-type Manual --replica-timeout 1800 --replica-retry-limit 1 --replica-completion-count 1 --image mcr.microsoft.com/azure-cloudshell:latest --mi-system-assigned --command "/bin/bash" --args "-c" "az login --identity && wget -O /opt/list_subscriptions_and_resourcegroups.sh https://raw.githubusercontent.com/MariuszFerdyn/AnyScriptFromCloudShell/main/AzureCloudShellBash/list_subscriptions_and_resourcegroups.sh && chmod +x /opt/list_subscriptions_and_resourcegroups.sh && cd /opt && ./list_subscriptions_and_resourcegroups.sh" --cpu 0.5 --memory 1.0Gi
+# Get the resource ID of the Container App Environment (needed by the YAML manifest below)
+environmentId=$(az containerapp env show --name $Enviorment --resource-group $ResourceGroup --query id --output tsv)
+
+# Create the Container App Job using a YAML manifest instead of "--command"/"--args"
+# CLI flags. This avoids a well-known Azure CLI argparse limitation: passing a
+# dash-prefixed value such as "-c" through "--args" makes the CLI misinterpret
+# it as one of its own (unrecognized) options. Defining command/args in YAML
+# sidesteps that limitation entirely.
+# The container's command runs "az login --identity" first to authenticate as
+# the job's system-assigned managed identity, then downloads and runs the
+# Bash script.
+cat <<EOF > list-subscriptions-job.yaml
+location: $location
+identity:
+  type: SystemAssigned
+properties:
+  environmentId: $environmentId
+  configuration:
+    triggerType: Manual
+    replicaTimeout: 1800
+    replicaRetryLimit: 1
+    manualTriggerConfig:
+      replicaCompletionCount: 1
+      parallelism: 1
+  template:
+    containers:
+      - image: mcr.microsoft.com/azure-cloudshell:latest
+        name: list-subscriptions-job
+        command:
+          - /bin/bash
+        args:
+          - -c
+          - "az login --identity && wget -O /opt/list_subscriptions_and_resourcegroups.sh https://raw.githubusercontent.com/MariuszFerdyn/AnyScriptFromCloudShell/main/AzureCloudShellBash/list_subscriptions_and_resourcegroups.sh && chmod +x /opt/list_subscriptions_and_resourcegroups.sh && cd /opt && ./list_subscriptions_and_resourcegroups.sh"
+        resources:
+          cpu: 0.5
+          memory: 1.0Gi
+EOF
+
+az containerapp job create --name list-subscriptions-job --resource-group $ResourceGroup --yaml list-subscriptions-job.yaml
 
 # Get the principal ID of the Container App Job's system-assigned managed identity
 principalId=$(az containerapp job show --name list-subscriptions-job --resource-group $ResourceGroup --query identity.principalId --output tsv)
