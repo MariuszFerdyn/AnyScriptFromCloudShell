@@ -6,7 +6,7 @@ This project downloads and runs scripts (Bash, Azure CLI, Python, or any other
 interpreter available in a container image) from network sources and executes
 them inside isolated, disposable containers. It is designed around the idea
 of an "Azure Cloud Shell in a box": any container image that ships the tools
-you need (e.g. `mcr.microsoft.com/azure-cli`) can pull a script from the
+you need (e.g. `mcr.microsoft.com/azure-cloudshell:latest`) can pull a script from the
 network and run it on demand. It can be run locally with Docker or deployed
 to Azure services such as Azure Container Apps (Container App Jobs), Azure
 App Service, and more.
@@ -49,7 +49,7 @@ authenticated identity and enumerates the resource groups inside each one.
 #### Docker Command Example
 
 ```bash
-docker run -it --rm --name my-cloudshell-script mcr.microsoft.com/azure-cli /bin/bash -c "az login --use-device-code && wget -O /opt/list_subscriptions_and_resourcegroups.sh https://raw.githubusercontent.com/MariuszFerdyn/AnyScriptFromCloudShell/main/AzureCloudShellBash/list_subscriptions_and_resourcegroups.sh && chmod +x /opt/list_subscriptions_and_resourcegroups.sh && cd /opt && ./list_subscriptions_and_resourcegroups.sh"
+docker run -it --rm --name my-cloudshell-script mcr.microsoft.com/azure-cloudshell:latest /bin/bash -c "az login --use-device-code && wget -O /opt/list_subscriptions_and_resourcegroups.sh https://raw.githubusercontent.com/MariuszFerdyn/AnyScriptFromCloudShell/main/AzureCloudShellBash/list_subscriptions_and_resourcegroups.sh && chmod +x /opt/list_subscriptions_and_resourcegroups.sh && cd /opt && ./list_subscriptions_and_resourcegroups.sh"
 ```
 
 #### Azure Container App Example
@@ -75,7 +75,7 @@ az containerapp env create --name $Enviorment --resource-group $ResourceGroup --
 # Create the Container App Job with a system-assigned managed identity.
 # The job's command runs "az login --identity" first to authenticate as the
 # managed identity, then downloads and runs the Bash script.
-az containerapp job create --name list-subscriptions-job --resource-group $ResourceGroup --environment $Enviorment --trigger-type Manual --replica-timeout 1800 --replica-retry-limit 1 --replica-completion-count 1 --image mcr.microsoft.com/azure-cli --mi-system-assigned --command-line "/bin/bash -c 'az login --identity && wget -O /opt/list_subscriptions_and_resourcegroups.sh https://raw.githubusercontent.com/MariuszFerdyn/AnyScriptFromCloudShell/main/AzureCloudShellBash/list_subscriptions_and_resourcegroups.sh && chmod +x /opt/list_subscriptions_and_resourcegroups.sh && cd /opt && ./list_subscriptions_and_resourcegroups.sh'" --cpu 0.5 --memory 1.0Gi
+az containerapp job create --name list-subscriptions-job --resource-group $ResourceGroup --environment $Enviorment --trigger-type Manual --replica-timeout 1800 --replica-retry-limit 1 --replica-completion-count 1 --image mcr.microsoft.com/azure-cloudshell:latest --mi-system-assigned --command-line "/bin/bash -c 'az login --identity && wget -O /opt/list_subscriptions_and_resourcegroups.sh https://raw.githubusercontent.com/MariuszFerdyn/AnyScriptFromCloudShell/main/AzureCloudShellBash/list_subscriptions_and_resourcegroups.sh && chmod +x /opt/list_subscriptions_and_resourcegroups.sh && cd /opt && ./list_subscriptions_and_resourcegroups.sh'" --cpu 0.5 --memory 1.0Gi
 
 # Get the principal ID of the Container App Job's system-assigned managed identity
 principalId=$(az containerapp job show --name list-subscriptions-job --resource-group $ResourceGroup --query identity.principalId --output tsv)
